@@ -39,7 +39,7 @@ studentSchema.pre("findOneAndDelete", async function (next) {
 
      if(doc) {
         const Enrollment = mongoose.model("Enrollment");
-        await Enrollment.deleteMany({ student: doc. id});
+        await Enrollment.deleteMany({ student: doc._id});
      }
 
      next();

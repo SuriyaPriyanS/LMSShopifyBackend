@@ -44,7 +44,7 @@ async function main() {
   app.use("/api/enrollments", verifyRequest, enrollmentRoutes);
   app.use("/api", verifyRequest, shopRoutes);
 
-  const webDist = path.join(__dirname, "..", "web", "dist");
+  const webDist = path.join(__dirname, "..", "Frontend", "dist");
   app.use(express.static(webDist));
 
   app.get("/{*splat}", (req, res, next) => {

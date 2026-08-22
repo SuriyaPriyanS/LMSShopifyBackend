@@ -13,8 +13,8 @@ router.get("/shop-info", async (req,res) => {
             query{
             shop {
             name
-            eamil
-            myshopifyDomin
+            email
+            myshopifyDomain
             plan {displayName}
             currencyCode
             }
@@ -23,8 +23,8 @@ router.get("/shop-info", async (req,res) => {
 
     }
     catch (error) {
-      console.log("Shop information vlaidation", error);
-      res.status(502).json({error: "faloited to reach shopfiy Admin Api"});
+      console.log("Shop information validation", error);
+      res.status(502).json({error: "failed to reach Shopify Admin Api"});
     }
 });
 
@@ -34,8 +34,8 @@ router.get("/shopify-customers", async (req, res) => {
         const response = await client.request(`
 
             query {
-            customers(first:25, sortkey: CREATED_AT ,reverse: true) {
-            edge {
+            customers(first:25, sortKey: CREATED_AT, reverse: true) {
+            edges {
             node {
             id
             displayName
@@ -49,8 +49,8 @@ router.get("/shopify-customers", async (req, res) => {
 
     }
     catch (error) {
-        console.log("Shopify customewrs mismatch", error);
-        res.status(502).json({error: "faliesd to reach Shopify Admin Api"})
+        console.log("Shopify customers mismatch", error);
+        res.status(502).json({error: "failed to reach Shopify Admin Api"})
     }
 });
 

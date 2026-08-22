@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const host =(process.env.HOST || "").replace(/^http?:\/\//, "");
+const host =(process.env.HOST || "").replace(/^https?:\/\//, "");
 
 console.log("HOST:", process.env.HOST);
 console.log("SHOPIFY HOST:", host);

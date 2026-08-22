@@ -14,7 +14,7 @@ const enrollmentSchema = new mongoose.Schema({
         type: Date, default: Date.now
     },
     status: {
-        type: String, enum: ["InProgress", "Completed"], default: "InProgress"
+        type: String, enum: ["In Progress", "Completed"], default: "In Progress"
     }, 
 },
 
@@ -24,4 +24,4 @@ const enrollmentSchema = new mongoose.Schema({
 
 enrollmentSchema.index({ student: 1, course: 1}, { unique:true});
 
-export default mongoose.model("Entrollment", enrollmentSchema);
+export default mongoose.model("Enrollment", enrollmentSchema);

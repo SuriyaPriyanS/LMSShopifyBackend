@@ -15,7 +15,6 @@ shopify.webhooks.addHandlers({
             console.log(`webhook ${topic} for ${shop}`);
             await Shop.findOneAndUpdate({shop} , {uninstalledAt: new Date()});
 
-            const courses = await Coures.find({shop} , "_id");
             await Enrollment.deleteMany({shop});
             await Course.deleteMany({shop});
             await Student.deleteMany({shop});
@@ -38,10 +37,10 @@ shopify.webhooks.addHandlers({
     },
     SHOP_REDACT: {
         deliveryMethod : "http",
-        callbackUrl: "api/webhooks",
+        callbackUrl: "/api/webhooks",
         callback : async (topic , shop) => {
             console.log(`webhook ${topic} for ${shop}: shop redact requested`);
-            await Enrollment.deleteMany({shop}),
+            await Enrollment.deleteMany({shop});
             await Course.deleteMany({shop});
             await Student.deleteMany({shop});
             await Shop.deleteMany({shop});
@@ -51,7 +50,7 @@ shopify.webhooks.addHandlers({
 
 router.post("/", async (req, res) => {
     try {
-        await shopify.webhooks.process({rawbody: req.rawbody, rawRequest: req, rawResponse: res});
+        await shopify.webhooks.process({rawBody: req.rawBody, rawRequest: req, rawResponse: res});
 
     }
     catch(error) {

@@ -41,7 +41,7 @@ router.post("/", async (req, res) => {
         const course = await Course.create({
             shop: req.shop,
             title: req.body.title.trim(),
-            descripation: req.body.descripation.trim(),
+            description: req.body.description.trim(),
             instructorName: req.body.instructorName.trim(),
             category: req.body.category.trim(),
             duration: req.body.duration.trim(),
@@ -62,7 +62,7 @@ router.patch("/:id", async (req, res)=> {
 
     try {
         const update = {}; 
-        for(const key of ["title", "descripation", "instructorName", "category", "duration", "status"]) {
+        for(const key of ["title", "description", "instructorName", "category", "duration", "status"]) {
             if(req.body[key] !== undefined) {
                 update[key] = typeof req.body[key] === "string" ? req.body[key].trim() : req.body[key];
 
@@ -89,7 +89,7 @@ router.patch("/:id", async (req, res)=> {
 router.delete("/:id" , async (req, res) => {
     try {
         const course = await Course.findOneAndDelete({_id: req.params.id, shop: req.shop});
-        if(!course) return res.status(404).json({error: "Course not douns"});
+        if(!course) return res.status(404).json({error: "Course not found"});
         res.json({ success: true});
 
     }

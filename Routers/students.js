@@ -44,7 +44,7 @@ router.get("/:id", async (req, res)=> {
 
 router.post("/", async (req, res) => {
     const {valid , errors} = validateStudent(req.body);
-    if(!valid) return res.status(422).json({error : "validation failted", filelds: errors});
+    if(!valid) return res.status(422).json({error : "Validation failed", fields: errors});
 
     try {
         const student = await Student.create({
@@ -57,11 +57,11 @@ router.post("/", async (req, res) => {
     }
     catch (error) {
         if(error.code === 11000){
-            return res.status(409).json({error: "A student with this emaill already exites"});
+            return res.status(409).json({error: "A student with this email already exists"});
 
         }
-        console.log("student create un sucessfully", error);
-        res.status(500).json({error:"Failted to create student"})
+        console.log("student create un successfully", error);
+        res.status(500).json({error:"Failed to create student"})
     }
 });
 
@@ -85,10 +85,10 @@ router.patch("/:id", async (req, res)=> {
     }
     catch (error) {
         if(error.code === 11000){
-            return res.status(409).json({error: "A student with this email already exites"});
+            return res.status(409).json({error: "A student with this email already exists"});
         }
         console.log("Student update missing" , error);
-        res.status(400).json({error: "Filated to updated student role"});
+        res.status(400).json({error: "Failed to update student details"});
     }
 });
 
@@ -101,7 +101,7 @@ router.delete("/:id" , async(req, res) => {
     }
     catch (error){
         console.log("Student delete details" , error);
-        res.status(400).json({error: "Failted to delted student detailsh"})
+        res.status(400).json({error: "Failed to delete student details"})
     }
 });
 

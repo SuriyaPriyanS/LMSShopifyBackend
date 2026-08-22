@@ -9,8 +9,8 @@ const courseSchema = new mongoose.Schema({
     title: {
         type: String, required : [true, "Course title is required"] , trim: true, minlength: 2, maxlength:200 } ,
       
-        descripation: {
-            type:String, required: [true, "Descripation is required"], 
+        description: {
+            type:String, required: [true, "Description is required"], 
             trim: true, maxlength: 4000
         },
         instructorName: {
@@ -46,4 +46,4 @@ const courseSchema = new mongoose.Schema({
         next();
    });
 
-   export default mongoose.model("Courese", courseSchema);
+   export default mongoose.model("Course", courseSchema);

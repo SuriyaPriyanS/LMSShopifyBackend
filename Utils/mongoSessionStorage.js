@@ -1,5 +1,6 @@
 import SessionModel from "../models/Session.js";
 import ShopModel from "../models/Shop.js";
+import { Session } from "@shopify/shopify-api";
 
 
 export class MongoSessionStorage {
@@ -29,7 +30,7 @@ export class MongoSessionStorage {
 
     async deleteSession(id) {
         await SessionModel.deleteOne({id});
-        return false;
+        return true;
     }
 
     async deleteSessions(ids) {
