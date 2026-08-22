@@ -5,7 +5,10 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const host =(process.env.HOST || "").replace(/^https?:\/\//, "");
+const host =(process.env.HOST || "").replace(/^http?:\/\//, "");
+
+console.log("HOST:", process.env.HOST);
+console.log("SHOPIFY HOST:", host);
 
 
 
@@ -14,6 +17,7 @@ export const shopify = shopifyApi({
     apiSecretKey: process.env.SHOPIFY_API_SECRET,
     scopes: (process.env.SCOPES || "read_products, read_customers, write_products").split(","),
     hostName: host,
+    hostScheme: "http",
     apiVersion: ApiVersion.July26,
     isEmbeddedApp: true,
     sessionStorage: new MongoSessionStorage(),
