@@ -51,7 +51,7 @@ router.post("/", async (req, res) => {
             shop: req.shop,
             name: req.body.name.trim(),
             email: req.body.email.trim().toLowerCase(),
-
+            shopifyCustomerId: req.body.shopifyCustomerId || null,
         });
         res.status(201).json({student});
     }
