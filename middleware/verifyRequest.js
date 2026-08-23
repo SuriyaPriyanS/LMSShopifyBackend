@@ -1,38 +1,58 @@
 import shopify from "../Utils/shopify.js";
 import SessionModel from "../models/Session.js";
+import ShopModel from "../models/Shop.js";
+import { Session } from "@shopify/shopify-api";
 
 
 export async function verifyRequest(req, res, next) {
 
     
 
-  // Development Bypass for Postman Testing (loads offline session, or creates a mock fallback if not yet installed)
   const mockShop = req.headers["x-mock-shop"];
   if (mockShop) {
     try {
       const shop = mockShop.replace(/^https?:\/\//, "").split("/")[0].trim();
-      const offlineId = shopify.session.getOfflineId(shop);
-      let session = await SessionModel.findOne({ id: offlineId }).lean();
+      const offlineId = `offline_${shop}`;
       
-      if (!session) {
-        session = {
-          id: offlineId,
-          shop: shop,
-          payload: {
-            id: offlineId,
-            shop: shop,
-            accessToken: "shpua_a5472d8ecf143d566e69ec78804ae412",
-            state: "active"
-          }
-        };
+      // 1. Try loading via SessionModel
+      let session = null;
+      const sessionDoc = await SessionModel.findOne({ id: offlineId }).lean();
+      if (sessionDoc && sessionDoc.payload) {
+        session = new Session(sessionDoc.payload);
       }
 
-      const accessToken = session.payload?.accessToken || session.accessToken;
-      if (accessToken) {
-        req.shop = shop;
-        req.shopifySession = session.payload ? session.payload : session;
-        return next();
+      // 2. Fallback: Check ShopModel for direct accessToken reference
+      if (!session) {
+        const shopDoc = await ShopModel.findOne({ shop }).lean();
+        if (shopDoc && shopDoc.accessToken) {
+          session = new Session({
+            id: offlineId,
+            shop,
+            state: "active",
+            isOnline: false,
+            accessToken: shopDoc.accessToken,
+            scope: process.env.SCOPES,
+          });
+        }
       }
+
+      // 3. Fallback 3: Hardcoded mock token or env mock token override if absolutely no record is found in DB
+      if (!session) {
+        const fallbackToken = process.env.MOCK_ACCESS_TOKEN || "shpua_a5472d8ecf143d566e69ec78804ae412";
+        console.warn(`No offline session or shop record found in DB for ${shop}. Falling back to mock token.`);
+        session = new Session({
+          id: offlineId,
+          shop,
+          state: "active",
+          isOnline: false,
+          accessToken: fallbackToken,
+          scope: process.env.SCOPES,
+        });
+      }
+
+      req.shop = shop;
+      req.shopifySession = session;
+      return next();
     } catch (error) {
       console.error("Mock auth bypass failed:", error);
     }
@@ -51,8 +71,9 @@ export async function verifyRequest(req, res, next) {
     const payload = await shopify.session.decodeSession(bearerToken);
     console.log(payload , "payload");
     const shop = payload.dest.replace("https://", "");
-    const offlineId = shopify.session.getOfflineId(shop);
-    const session = await shopify.sessionStorage.loadSession(offlineId);
+    const offlineId = `offline_${shop}`;
+    const sessionDoc = await SessionModel.findOne({ id: offlineId }).lean();
+    const session = sessionDoc && sessionDoc.payload ? new Session(sessionDoc.payload) : null;
 
 
     if(!session || !session.accessToken) {

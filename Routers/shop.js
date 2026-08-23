@@ -5,6 +5,8 @@ import {shopify} from "../Utils/shopify.js";
 const router = express.Router();
 
 router.get("/shop-info", async (req,res) => {
+
+     console.log("Shopify session:", req.shopifySession);
     try {
          console.log("Shopify session:", req.shopifySession);
         const client = new shopify.clients.Graphql({session: req.shopifySession});

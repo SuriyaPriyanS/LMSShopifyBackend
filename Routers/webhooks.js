@@ -11,7 +11,7 @@ shopify.webhooks.addHandlers({
     APP_UNINSTALLED: {
         deliveryMethod: "http",
         callbackUrl: "/api/webhooks",
-        callback: async (topic , shop) => {
+        callback: async ({ topic, shop }) => {
             console.log(`webhook ${topic} for ${shop}`);
             await Shop.findOneAndUpdate({shop} , {uninstalledAt: new Date()});
 
@@ -23,7 +23,7 @@ shopify.webhooks.addHandlers({
     CUSTOMERS_DATA_REQUEST: {
         deliveryMethod: "http",
         callbackUrl: "/api/webhooks",
-        callback: async (topic, shop, body) => {
+        callback: async ({ topic, shop, body }) => {
             console.log(`webhook ${topic} for ${shop}: customer data request logged`);
         },
 
@@ -31,14 +31,14 @@ shopify.webhooks.addHandlers({
     CUSTOMERS_REDACT: {
         deliveryMethod: "http",
         callbackUrl: "/api/webhooks",
-        callback: async (topic, shop, body) => {
+        callback: async ({ topic, shop, body }) => {
             console.log(`Webhook ${topic} for ${shop}: customer redact requested`);
         },
     },
     SHOP_REDACT: {
         deliveryMethod : "http",
         callbackUrl: "/api/webhooks",
-        callback : async (topic , shop) => {
+        callback : async ({ topic, shop }) => {
             console.log(`webhook ${topic} for ${shop}: shop redact requested`);
             await Enrollment.deleteMany({shop});
             await Course.deleteMany({shop});
