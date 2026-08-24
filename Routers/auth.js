@@ -179,7 +179,7 @@ router.get("/callback", async (req, res) => {
 
         if (!res.headersSent) {
             return res.status(500).send(
-                "Authentication failed. Try installing the app again."
+                `Authentication failed: ${error.message}. Try installing the app again.`
             );
         }
     }
