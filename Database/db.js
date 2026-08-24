@@ -8,12 +8,13 @@ dotenv.config();
 let cachedConnection = null;
 
 const dbConnect = async () => {
-    if (mongoose.connection.readyState >= 1) {
+    if (mongoose.connection.readyState === 1) {
         return;
     }
 
     if (cachedConnection) {
-        return cachedConnection;
+        await cachedConnection;
+        return;
     }
 
     try {
