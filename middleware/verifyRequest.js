@@ -59,21 +59,40 @@ export async function verifyRequest(req, res, next) {
   }
 
   const authHeader = req.headers.authorization || "";
-  
-
-  const bearerToken = authHeader.match(/Bearer (.*)/)?.[1];
+  const bearerToken = authHeader.match(/^Bearer\s+(.+)$/i)?.[1];
   
   if(!bearerToken) {
     return res.status(401).json({ error: "Unauthorized" , message: "Missing session token"});
   }
 
   try {
-    const payload = await shopify.session.decodeSession(bearerToken);
-    console.log(payload , "payload");
-    const shop = payload.dest.replace("https://", "");
+    const payload = await shopify.session.decodeSessionToken(bearerToken);
+    const shop = shopify.utils.sanitizeShop(payload.dest, true);
+    if (!shop) {
+      return res.status(401).json({
+        error: "Unauthorized",
+        message: "Session token does not contain a valid Shopify shop",
+      });
+    }
     const offlineId = `offline_${shop}`;
     const sessionDoc = await SessionModel.findOne({ id: offlineId }).lean();
-    const session = sessionDoc && sessionDoc.payload ? new Session(sessionDoc.payload) : null;
+    let session = sessionDoc?.payload ? new Session(sessionDoc.payload) : null;
+
+    // OAuth may have completed before the session storage write. The shop record
+    // still contains the offline Admin API token in that case.
+    if (!session?.accessToken) {
+      const shopDoc = await ShopModel.findOne({ shop }).lean();
+      if (shopDoc?.accessToken) {
+        session = new Session({
+          id: offlineId,
+          shop,
+          state: "active",
+          isOnline: false,
+          accessToken: shopDoc.accessToken,
+          scope: process.env.SCOPES,
+        });
+      }
+    }
 
 
     if(!session || !session.accessToken) {

@@ -17,7 +17,7 @@ export const shopify = shopifyApi({
     apiSecretKey: process.env.SHOPIFY_API_SECRET,
     scopes: (process.env.SCOPES || "read_products, read_customers, write_products").split(","),
     hostName: host,
-    hostScheme: "http",
+    hostScheme: process.env.HOST?.startsWith("https://") ? "https" : "http",
     apiVersion: ApiVersion.July26,
     isEmbeddedApp: true,
     sessionStorage: new MongoSessionStorage(),
