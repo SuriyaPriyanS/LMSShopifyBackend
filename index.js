@@ -26,6 +26,19 @@ const app = express();
 
 app.set("trust proxy", true);
 
+// Middleware to ensure MongoDB is fully connected before executing any route
+app.use(async (req, res, next) => {
+  try {
+    await dbConnect();
+    next();
+  } catch (error) {
+    console.error("Database connection middleware error:", error);
+    if (!res.headersSent) {
+      res.status(500).send("Database connection failed. Please try again.");
+    }
+  }
+});
+
 app.use(cors());
 app.use(cookieParser());
 
