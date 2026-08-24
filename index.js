@@ -49,7 +49,7 @@ app.use("/api", verifyRequest, shopRoutes);
 const webDist = path.join(__dirname, "..", "Frontend", "dist");
 app.use(express.static(webDist));
 
-app.get("/{*splat}", (req, res, next) => {
+app.get("*splat", (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
 
   res.set(

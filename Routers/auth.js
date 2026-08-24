@@ -5,6 +5,13 @@ import Shop from "../models/Shop.js";
 const router = express.Router();
 
 
+router.get("/config", (req, res) => {
+    res.json({
+        apiKey: process.env.SHOPIFY_API_KEY,
+    });
+});
+
+
 router.get("/", async (req, res) => {
     try {
         const shop = shopify.utils.sanitizeShop(
@@ -80,10 +87,10 @@ router.get("/callback", async (req, res) => {
 
         console.log("Webhooks registered");
 
-        const host = req.query.host;
+        const shopifyApiKey = process.env.SHOPIFY_API_KEY;
 
         return res.redirect(
-            `/?shop=${session.shop}&host=${host}`
+            `https://${session.shop}/admin/apps/${shopifyApiKey}`
         );
 
     } catch (error) {

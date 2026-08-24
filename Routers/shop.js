@@ -21,12 +21,13 @@ router.get("/shop-info", async (req,res) => {
             currencyCode
             }
             }`);
-            res.json({shop: response.data.shop});
+            const data = response.body?.data || response.data;
+            res.json({shop: data.shop});
 
     }
     catch (error) {
       console.log("Shop information validation", error);
-      res.status(502).json({error: "failed to reach Shopify Admin Api"});
+        res.status(502).json({error: "failed to reach Shopify Admin Api", message: error.message});
     }
 });
 
@@ -46,13 +47,14 @@ router.get("/shopify-customers", async (req, res) => {
             }}}
             }
             `);
-            const customers = response.data.customers.edges.map((e)=> e.node);
+            const data = response.body?.data || response.data;
+            const customers = data.customers.edges.map((e)=> e.node);
             res.json({customers});
 
     }
     catch (error) {
         console.log("Shopify customers mismatch", error);
-        res.status(502).json({error: "failed to reach Shopify Admin Api"})
+        res.status(502).json({error: "failed to reach Shopify Admin Api", message: error.message})
     }
 });
 
