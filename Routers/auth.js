@@ -13,6 +13,20 @@ router.get("/config", (req, res) => {
 });
 
 
+router.get("/check-db", async (req, res) => {
+    try {
+        const shops = await Shop.find({}).lean();
+        res.json({
+            success: true,
+            shopsCount: shops.length,
+            shops: shops.map(s => ({ shop: s.shop, hasToken: !!s.accessToken, installedAt: s.installedAt })),
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+
 router.get("/", async (req, res) => {
     try {
         const shop = shopify.utils.sanitizeShop(
