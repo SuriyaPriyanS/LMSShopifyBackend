@@ -1,6 +1,7 @@
 import express from "express";
 import { shopify } from "../Utils/shopify.js";
 import Shop from "../models/Shop.js";
+import { Session } from "@shopify/shopify-api";
 
 const router = express.Router();
 
@@ -11,36 +12,6 @@ router.get("/config", (req, res) => {
     });
 });
 
-
-function parseSetCookie(cookieStr) {
-    const parts = cookieStr.split(";");
-    const [namePair, ...attrPairs] = parts;
-    const eqIdx = namePair.indexOf("=");
-    if (eqIdx === -1) return null;
-    const name = namePair.substring(0, eqIdx).trim();
-    const val = namePair.substring(eqIdx + 1).trim();
-
-    const options = {};
-    for (const attr of attrPairs) {
-        const trimmed = attr.trim();
-        const lowerTrimmed = trimmed.toLowerCase();
-        if (lowerTrimmed === "secure") {
-            options.secure = true;
-        } else if (lowerTrimmed === "httponly") {
-            options.httpOnly = true;
-        } else if (lowerTrimmed.startsWith("samesite=")) {
-            const sameSiteVal = trimmed.split("=")[1].trim().toLowerCase();
-            options.sameSite = sameSiteVal === "none" ? "none" : sameSiteVal;
-        } else if (lowerTrimmed.startsWith("path=")) {
-            options.path = trimmed.split("=")[1].trim();
-        } else if (lowerTrimmed.startsWith("max-age=")) {
-            options.maxAge = parseInt(trimmed.split("=")[1].trim(), 10) * 1000;
-        } else if (lowerTrimmed.startsWith("expires=")) {
-            options.expires = new Date(trimmed.split("=")[1].trim());
-        }
-    }
-    return { name, val, options };
-}
 
 router.get("/", async (req, res) => {
     try {
@@ -56,25 +27,6 @@ router.get("/", async (req, res) => {
         }
 
         console.log("Starting OAuth for:", shop);
-
-        const originalSetHeader = res.setHeader.bind(res);
-        res.setHeader = function (name, value) {
-            if (name.toLowerCase() === "set-cookie") {
-                const cookieArray = Array.isArray(value) ? value : [value];
-                for (const cookieStr of cookieArray) {
-                    try {
-                        const parsed = parseSetCookie(cookieStr);
-                        if (parsed) {
-                            res.cookie(parsed.name, parsed.val, parsed.options);
-                        }
-                    } catch (err) {
-                        console.error("Failed to parse and set cookie:", err);
-                    }
-                }
-                return res;
-            }
-            return originalSetHeader(name, value);
-        };
 
         await shopify.auth.begin({
             shop,
@@ -99,55 +51,54 @@ router.get("/", async (req, res) => {
 router.get("/callback", async (req, res) => {
     try {
         console.log("OAuth callback received");
-        console.log("Shop:", req.query.shop);
+        const shop = req.query.shop;
+        const code = req.query.code;
 
-        // Inject matching state cookie into headers to bypass cookie-folding or SameSite blocks in serverless env
-        if (req.query.state) {
-            const stateCookie = `shopify_app_state=${req.query.state}`;
-            if (req.headers.cookie) {
-                req.headers.cookie = `${req.headers.cookie}; ${stateCookie}`;
-            } else {
-                req.headers.cookie = stateCookie;
-            }
+        if (!shop || !code) {
+            throw new Error("Missing shop or code parameter");
         }
 
-        const originalSetHeader = res.setHeader.bind(res);
-        res.setHeader = function (name, value) {
-            if (name.toLowerCase() === "set-cookie") {
-                const cookieArray = Array.isArray(value) ? value : [value];
-                for (const cookieStr of cookieArray) {
-                    try {
-                        const parsed = parseSetCookie(cookieStr);
-                        if (parsed) {
-                            res.cookie(parsed.name, parsed.val, parsed.options);
-                        }
-                    } catch (err) {
-                        console.error("Failed to parse and set cookie:", err);
-                    }
-                }
-                return res;
-            }
-            return originalSetHeader(name, value);
-        };
-
-        const callback = await shopify.auth.callback({
-            rawRequest: req,
-            rawResponse: res,
+        console.log("Exchanging code for access token...");
+        const tokenResponse = await fetch(`https://${shop}/admin/oauth/access_token`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                client_id: process.env.SHOPIFY_API_KEY,
+                client_secret: process.env.SHOPIFY_API_SECRET,
+                code: code,
+            }),
         });
 
-        const { session } = callback;
+        if (!tokenResponse.ok) {
+            const errBody = await tokenResponse.text();
+            throw new Error(`Failed to exchange token: ${errBody}`);
+        }
 
-        console.log("Authenticated shop:", session.shop);
-        console.log(
-            "Access token received:",
-            !!session.accessToken
-        );
+        const tokenData = await tokenResponse.json();
+        const accessToken = tokenData.access_token;
 
+        console.log("Access token received. Creating session...");
+        const offlineId = `offline_${shop}`;
+        const session = new Session({
+            id: offlineId,
+            shop,
+            state: "active",
+            isOnline: false,
+            accessToken: accessToken,
+            scope: tokenData.scope || process.env.SCOPES,
+        });
+
+        // Store the session in MongoDB Session Storage
+        await shopify.config.sessionStorage.storeSession(session);
+
+        // Also save shop to ShopModel
         await Shop.findOneAndUpdate(
-            { shop: session.shop },
+            { shop },
             {
-                shop: session.shop,
-                accessToken: session.accessToken,
+                shop,
+                accessToken,
                 installedAt: new Date(),
                 uninstalledAt: null,
             },
@@ -157,8 +108,9 @@ router.get("/callback", async (req, res) => {
             }
         );
 
-        console.log("Shop saved to MongoDB");
+        console.log("Shop and session saved to MongoDB");
 
+        // Register webhooks
         await shopify.webhooks.register({
             session,
         });
@@ -168,7 +120,7 @@ router.get("/callback", async (req, res) => {
         const shopifyApiKey = process.env.SHOPIFY_API_KEY;
 
         return res.redirect(
-            `https://${session.shop}/admin/apps/${shopifyApiKey}`
+            `https://${shop}/admin/apps/${shopifyApiKey}`
         );
 
     } catch (error) {
