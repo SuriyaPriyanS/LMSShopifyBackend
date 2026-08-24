@@ -12,6 +12,36 @@ router.get("/config", (req, res) => {
 });
 
 
+function parseSetCookie(cookieStr) {
+    const parts = cookieStr.split(";");
+    const [namePair, ...attrPairs] = parts;
+    const eqIdx = namePair.indexOf("=");
+    if (eqIdx === -1) return null;
+    const name = namePair.substring(0, eqIdx).trim();
+    const val = namePair.substring(eqIdx + 1).trim();
+
+    const options = {};
+    for (const attr of attrPairs) {
+        const trimmed = attr.trim();
+        const lowerTrimmed = trimmed.toLowerCase();
+        if (lowerTrimmed === "secure") {
+            options.secure = true;
+        } else if (lowerTrimmed === "httponly") {
+            options.httpOnly = true;
+        } else if (lowerTrimmed.startsWith("samesite=")) {
+            const sameSiteVal = trimmed.split("=")[1].trim().toLowerCase();
+            options.sameSite = sameSiteVal === "none" ? "none" : sameSiteVal;
+        } else if (lowerTrimmed.startsWith("path=")) {
+            options.path = trimmed.split("=")[1].trim();
+        } else if (lowerTrimmed.startsWith("max-age=")) {
+            options.maxAge = parseInt(trimmed.split("=")[1].trim(), 10) * 1000;
+        } else if (lowerTrimmed.startsWith("expires=")) {
+            options.expires = new Date(trimmed.split("=")[1].trim());
+        }
+    }
+    return { name, val, options };
+}
+
 router.get("/", async (req, res) => {
     try {
         const shop = shopify.utils.sanitizeShop(
@@ -26,6 +56,25 @@ router.get("/", async (req, res) => {
         }
 
         console.log("Starting OAuth for:", shop);
+
+        const originalSetHeader = res.setHeader.bind(res);
+        res.setHeader = function (name, value) {
+            if (name.toLowerCase() === "set-cookie") {
+                const cookieArray = Array.isArray(value) ? value : [value];
+                for (const cookieStr of cookieArray) {
+                    try {
+                        const parsed = parseSetCookie(cookieStr);
+                        if (parsed) {
+                            res.cookie(parsed.name, parsed.val, parsed.options);
+                        }
+                    } catch (err) {
+                        console.error("Failed to parse and set cookie:", err);
+                    }
+                }
+                return res;
+            }
+            return originalSetHeader(name, value);
+        };
 
         await shopify.auth.begin({
             shop,
@@ -51,6 +100,25 @@ router.get("/callback", async (req, res) => {
     try {
         console.log("OAuth callback received");
         console.log("Shop:", req.query.shop);
+
+        const originalSetHeader = res.setHeader.bind(res);
+        res.setHeader = function (name, value) {
+            if (name.toLowerCase() === "set-cookie") {
+                const cookieArray = Array.isArray(value) ? value : [value];
+                for (const cookieStr of cookieArray) {
+                    try {
+                        const parsed = parseSetCookie(cookieStr);
+                        if (parsed) {
+                            res.cookie(parsed.name, parsed.val, parsed.options);
+                        }
+                    } catch (err) {
+                        console.error("Failed to parse and set cookie:", err);
+                    }
+                }
+                return res;
+            }
+            return originalSetHeader(name, value);
+        };
 
         const callback = await shopify.auth.callback({
             rawRequest: req,
