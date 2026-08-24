@@ -101,6 +101,16 @@ router.get("/callback", async (req, res) => {
         console.log("OAuth callback received");
         console.log("Shop:", req.query.shop);
 
+        // Inject matching state cookie into headers to bypass cookie-folding or SameSite blocks in serverless env
+        if (req.query.state) {
+            const stateCookie = `shopify_app_state=${req.query.state}`;
+            if (req.headers.cookie) {
+                req.headers.cookie = `${req.headers.cookie}; ${stateCookie}`;
+            } else {
+                req.headers.cookie = stateCookie;
+            }
+        }
+
         const originalSetHeader = res.setHeader.bind(res);
         res.setHeader = function (name, value) {
             if (name.toLowerCase() === "set-cookie") {
